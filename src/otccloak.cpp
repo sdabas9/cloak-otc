@@ -78,12 +78,16 @@ void otccloak::on_tlos_transfer(name from, name to, asset quantity, std::string 
    config cfg = cfg_table.get_or_default(config{});
    check(!cfg.paused, "contract is paused");
 
-   check(memo.substr(0, 4) == "buy:", "invalid memo format, expected buy:<listing_id>");
-   uint64_t listing_id = std::stoull(memo.substr(4));
+   check(memo.size() > 4 && memo.substr(0, 4) == "buy:", "invalid memo format, expected buy:<listing_id>");
+   std::string id_str = memo.substr(4);
+   check(id_str.find_first_not_of("0123456789") == std::string::npos,
+         "listing_id must be a number");
+   uint64_t listing_id = std::stoull(id_str);
 
    listings_table listings(get_self(), get_self().value);
    auto itr = listings.find(listing_id);
    check(itr != listings.end(), "listing not found");
+   check(from != itr->seller, "cannot buy your own listing");
 
    asset auction_price = get_last_auction_price();
    asset otc_price = compute_otc_price(auction_price, itr->premium_pct);
@@ -113,6 +117,11 @@ void otccloak::on_tlos_transfer(name from, name to, asset quantity, std::string 
 
    int128_t tlos_to_seller_raw = (int128_t)cloak_amount * otc_price.amount / 10000;
    asset tlos_to_seller = asset(static_cast<int64_t>(tlos_to_seller_raw), TLOS_SYMBOL);
+
+   // Refund rounding dust in non-capped case
+   if (tlos_refund == 0 && tlos_to_seller.amount < quantity.amount) {
+      tlos_refund = quantity.amount - tlos_to_seller.amount;
+   }
 
    // Send CLOAK to buyer
    action(

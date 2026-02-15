@@ -173,12 +173,17 @@ private:
 
       std::string price_str = rest.substr(0, sep);
       std::string pct_str = rest.substr(sep + 1);
+      check(!pct_str.empty(), "premium_pct is missing");
+      check(pct_str.find_first_not_of("0123456789") == std::string::npos,
+            "premium_pct must be a number");
 
       asset min_price = asset::from_string(price_str + " TLOS");
       check(min_price.amount > 0, "min_price must be positive");
       check(min_price.symbol == TLOS_SYMBOL, "min_price must be in TLOS");
 
-      uint16_t premium_pct = static_cast<uint16_t>(std::stoul(pct_str));
+      unsigned long raw_pct = std::stoul(pct_str);
+      check(raw_pct <= 10000, "premium_pct cannot exceed 10000");
+      uint16_t premium_pct = static_cast<uint16_t>(raw_pct);
 
       return {min_price, premium_pct};
    }
