@@ -90,6 +90,23 @@ public:
    };
    typedef singleton<"nextid"_n, nextid> nextid_singleton;
 
+   // ---- Actions ----
+   [[eosio::action]]
+   void setconfig(uint16_t fee_pct, bool paused);
+
+   [[eosio::action]]
+   void cancellisting(name seller, uint64_t listing_id);
+
+   [[eosio::action]]
+   void getprice(uint64_t listing_id);
+
+   // ---- Transfer notifications ----
+   [[eosio::on_notify("thezeostoken::transfer")]]
+   void on_cloak_transfer(name from, name to, asset quantity, std::string memo);
+
+   [[eosio::on_notify("eosio.token::transfer")]]
+   void on_tlos_transfer(name from, name to, asset quantity, std::string memo);
+
 private:
    asset get_last_auction_price() const {
       auctioncfg_table acfg(AUCTION_CONTRACT, AUCTION_CONTRACT.value);
@@ -139,5 +156,30 @@ private:
       }
       int128_t result = (int128_t)auction_price.amount * (100 + premium_pct) / 100;
       return asset(static_cast<int64_t>(result), TLOS_SYMBOL);
+   }
+
+   // ---- Memo parsing helper ----
+   struct list_memo {
+      asset    min_price;
+      uint16_t premium_pct;
+   };
+
+   list_memo parse_list_memo(const std::string& memo) const {
+      check(memo.substr(0, 5) == "list:", "invalid memo format, expected list:<min_price>:<premium_pct>");
+
+      std::string rest = memo.substr(5);
+      auto sep = rest.find(':');
+      check(sep != std::string::npos, "invalid memo format, missing premium_pct separator");
+
+      std::string price_str = rest.substr(0, sep);
+      std::string pct_str = rest.substr(sep + 1);
+
+      asset min_price = asset::from_string(price_str + " TLOS");
+      check(min_price.amount > 0, "min_price must be positive");
+      check(min_price.symbol == TLOS_SYMBOL, "min_price must be in TLOS");
+
+      uint16_t premium_pct = static_cast<uint16_t>(std::stoul(pct_str));
+
+      return {min_price, premium_pct};
    }
 };
