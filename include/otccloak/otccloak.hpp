@@ -14,23 +14,25 @@ using namespace eosio;
 // ---- External table structs for reading thezeosalias ----
 
 // Auction configuration (thezeosalias::auctioncfg table)
+// Field types must match the on-chain ABI exactly for correct deserialization.
 struct auction_cfg {
-   time_point_sec start;
-   uint32_t       round_dur;
-   uint32_t       num_rounds;
-   asset          tokens_per_round;
-   name           token_contract;
-   asset          min_contribution;
-   uint16_t       stake_rate;
+   uint32_t       start_block_time;   // Unix epoch seconds
+   uint32_t       round_duration_sec; // seconds per round (82800 = 23h)
+   uint16_t       number_of_rounds;   // total rounds (60)
+   asset          tokens_per_round;   // CLOAK per round
+   name           token_contract;     // thezeostoken
+   extended_asset min_contribution;   // minimum TLOS contribution
+   uint8_t        stake_rate;         // % of contributions staked
 
    uint64_t primary_key() const { return 0; }
 };
 typedef multi_index<"auctioncfg"_n, auction_cfg> auctioncfg_table;
 
 // Auction participant row (thezeosalias::auction table, scoped by round)
+// amount is raw int64 (not asset) per the on-chain ABI.
 struct auction_row {
    std::variant<std::vector<uint8_t>, name> user;
-   asset    amount;
+   int64_t  amount;   // TLOS contributed (raw units, 4 decimal)
    bool     claimed;
 
    uint64_t primary_key() const {
@@ -114,28 +116,28 @@ private:
       check(cfg_itr != acfg.end(), "auction config not found on thezeosalias");
 
       uint32_t now_sec = current_time_point().sec_since_epoch();
-      uint32_t start_sec = cfg_itr->start.sec_since_epoch();
+      uint32_t start_sec = cfg_itr->start_block_time;
 
       if (now_sec < start_sec) {
          return asset(0, TLOS_SYMBOL);
       }
 
       uint32_t elapsed = now_sec - start_sec;
-      uint32_t current_round = elapsed / cfg_itr->round_dur;
+      uint32_t current_round = elapsed / cfg_itr->round_duration_sec;
 
       if (current_round == 0) {
          return asset(0, TLOS_SYMBOL);
       }
 
       uint32_t last_round = current_round - 1;
-      if (last_round >= cfg_itr->num_rounds) {
-         last_round = cfg_itr->num_rounds - 1;
+      if (last_round >= cfg_itr->number_of_rounds) {
+         last_round = cfg_itr->number_of_rounds - 1;
       }
 
       auction_table auctions(AUCTION_CONTRACT, last_round);
       int64_t total_tlos = 0;
       for (auto itr = auctions.begin(); itr != auctions.end(); ++itr) {
-         total_tlos += itr->amount.amount;
+         total_tlos += itr->amount;
       }
 
       if (total_tlos == 0) {
