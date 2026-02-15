@@ -1,4 +1,4 @@
-export const OTC_CONTRACT = process.env.NEXT_PUBLIC_OTC_CONTRACT || "otccloak111";
+export const OTC_CONTRACT = process.env.NEXT_PUBLIC_OTC_CONTRACT || "cloakotc1111";
 export const CLOAK_CONTRACT = "thezeostoken";
 export const AUCTION_CONTRACT = "thezeosalias";
 export const TLOS_CONTRACT = "eosio.token";

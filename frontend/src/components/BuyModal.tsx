@@ -21,17 +21,44 @@ export default function BuyModal({
   onSuccess,
 }: BuyModalProps) {
   const { session, login } = useWallet();
-  const [tlosAmount, setTlosAmount] = useState("");
+  const [cloakInput, setCloakInput] = useState("");
+  const [tlosInput, setTlosInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const availableCloak = parseFloat(listing.quantity.split(" ")[0]);
-  const tlosNum = parseFloat(tlosAmount) || 0;
-  const cloakReceived = otcPrice > 0 ? tlosNum / otcPrice : 0;
-  const cloakCapped = Math.min(cloakReceived, availableCloak);
-  const feeCloak = cloakCapped * feePct / 10000;
-  const netCloak = cloakCapped - feeCloak;
-  const actualTlosCost = cloakCapped * otcPrice;
+  const cloakAmount = Math.min(parseFloat(cloakInput) || 0, availableCloak);
+  const pct = availableCloak > 0 ? (cloakAmount / availableCloak) * 100 : 0;
+  const tlosCost = cloakAmount * otcPrice;
+  const feeCloak = cloakAmount * feePct / 10000;
+  const netCloak = cloakAmount - feeCloak;
+
+  const updateFromCloak = (cloak: number) => {
+    const capped = Math.min(cloak, availableCloak);
+    setCloakInput(capped > 0 ? capped.toFixed(4) : "");
+    setTlosInput(capped > 0 ? (capped * otcPrice).toFixed(4) : "");
+  };
+
+  const handleCloakInput = (val: string) => {
+    setCloakInput(val);
+    const c = Math.min(parseFloat(val) || 0, availableCloak);
+    setTlosInput(c > 0 ? (c * otcPrice).toFixed(4) : "");
+  };
+
+  const handleTlosInput = (val: string) => {
+    setTlosInput(val);
+    const t = parseFloat(val) || 0;
+    const c = otcPrice > 0 ? Math.min(t / otcPrice, availableCloak) : 0;
+    setCloakInput(c > 0 ? c.toFixed(4) : "");
+  };
+
+  const setPercent = (p: number) => {
+    updateFromCloak(availableCloak * p / 100);
+  };
+
+  const handleSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFromCloak(parseFloat(e.target.value));
+  };
 
   const handleBuy = async () => {
     if (!session) {
@@ -43,7 +70,9 @@ export default function BuyModal({
     setError(null);
 
     try {
-      const quantity = `${tlosNum.toFixed(4)} TLOS`;
+      // Send enough TLOS to cover the CLOAK amount (add tiny buffer for rounding)
+      const tlosToSend = Math.ceil(tlosCost * 10000) / 10000;
+      const quantity = `${tlosToSend.toFixed(4)} TLOS`;
       await session.transact({
         actions: [
           {
@@ -109,57 +138,76 @@ export default function BuyModal({
             </div>
           </div>
 
-          {/* TLOS Input */}
-          <div className="mb-5">
-            <label className="block text-sm text-slate-400 mb-2">
-              Amount to spend
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                step="0.0001"
-                min="0"
-                value={tlosAmount}
-                onChange={(e) => setTlosAmount(e.target.value)}
-                placeholder="0.0000"
-                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 pr-16 text-white font-mono text-lg placeholder:text-slate-600 focus:outline-none focus:border-gold/40 focus:ring-1 focus:ring-gold/20 transition-all"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">
-                TLOS
-              </span>
+          {/* Editable Inputs */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="block text-xs text-slate-500 mb-1.5">You spend</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={tlosInput}
+                  onChange={(e) => handleTlosInput(e.target.value)}
+                  placeholder="0.0000"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 pr-14 text-white font-mono text-base placeholder:text-slate-600 focus:outline-none focus:border-gold/40 focus:ring-1 focus:ring-gold/20 transition-all"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">
+                  TLOS
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-500 mb-1.5">You receive</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={cloakInput}
+                  onChange={(e) => handleCloakInput(e.target.value)}
+                  placeholder="0.0000"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 pr-16 text-white font-mono text-base placeholder:text-slate-600 focus:outline-none focus:border-gold/40 focus:ring-1 focus:ring-gold/20 transition-all"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">
+                  CLOAK
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Preview */}
-          {tlosNum > 0 && (
-            <div className="rounded-xl bg-gold/[0.04] border border-gold/20 p-4 mb-5 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">You receive</span>
-                <span className="text-gold font-semibold font-mono">
-                  {netCloak.toFixed(4)} CLOAK
-                </span>
-              </div>
-              {feeCloak > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Fee (burned)</span>
-                  <span className="text-slate-400 font-mono">
-                    {feeCloak.toFixed(4)} CLOAK
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Actual cost</span>
-                <span className="text-slate-400 font-mono">
-                  {actualTlosCost.toFixed(4)} TLOS
-                </span>
-              </div>
-              {cloakReceived > availableCloak && (
-                <p className="text-xs text-amber-400 mt-1">
-                  Capped to available amount. Excess TLOS will be refunded.
-                </p>
-              )}
-            </div>
-          )}
+          {/* Slider */}
+          <div className="mb-4 px-1">
+            <input
+              type="range"
+              min={0}
+              max={availableCloak}
+              step={0.0001}
+              value={cloakAmount}
+              onChange={handleSlider}
+              className="w-full h-2 rounded-full appearance-none cursor-pointer bg-white/[0.06] accent-gold [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gold [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(212,175,55,0.4)] [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-gold-dim"
+              style={{
+                background: `linear-gradient(to right, rgb(212 175 55) 0%, rgb(212 175 55) ${pct}%, rgba(255,255,255,0.06) ${pct}%, rgba(255,255,255,0.06) 100%)`,
+              }}
+            />
+          </div>
+
+          {/* Percent Buttons */}
+          <div className="grid grid-cols-4 gap-2 mb-5">
+            {[25, 50, 75, 100].map((p) => (
+              <button
+                key={p}
+                onClick={() => setPercent(p)}
+                className={`py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                  Math.abs(pct - p) < 0.01
+                    ? "bg-gold/20 text-gold border-gold/40"
+                    : "bg-white/[0.03] text-slate-400 border-white/[0.06] hover:bg-white/[0.06] hover:text-white"
+                }`}
+              >
+                {p}%
+              </button>
+            ))}
+          </div>
 
           {/* Error */}
           {error && (
@@ -171,7 +219,7 @@ export default function BuyModal({
           {/* Action */}
           <button
             onClick={handleBuy}
-            disabled={submitting || tlosNum <= 0}
+            disabled={submitting || cloakAmount <= 0}
             className="w-full py-3 rounded-xl font-medium text-sm transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-gold to-gold-dim text-void hover:shadow-lg hover:shadow-gold/20 hover:-translate-y-[1px]"
           >
             {submitting

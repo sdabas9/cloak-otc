@@ -1,0 +1,143 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ",
+    "version": "eosio::abi/1.2",
+    "types": [],
+    "structs": [
+        {
+            "name": "cancellisting",
+            "base": "",
+            "fields": [
+                {
+                    "name": "seller",
+                    "type": "name"
+                },
+                {
+                    "name": "listing_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "config",
+            "base": "",
+            "fields": [
+                {
+                    "name": "fee_pct",
+                    "type": "uint16"
+                },
+                {
+                    "name": "paused",
+                    "type": "bool"
+                }
+            ]
+        },
+        {
+            "name": "getprice",
+            "base": "",
+            "fields": [
+                {
+                    "name": "listing_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "listing",
+            "base": "",
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "seller",
+                    "type": "name"
+                },
+                {
+                    "name": "quantity",
+                    "type": "asset"
+                },
+                {
+                    "name": "min_price",
+                    "type": "asset"
+                },
+                {
+                    "name": "premium_pct",
+                    "type": "uint16"
+                },
+                {
+                    "name": "created_at",
+                    "type": "time_point_sec"
+                }
+            ]
+        },
+        {
+            "name": "nextid",
+            "base": "",
+            "fields": [
+                {
+                    "name": "next_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "setconfig",
+            "base": "",
+            "fields": [
+                {
+                    "name": "fee_pct",
+                    "type": "uint16"
+                },
+                {
+                    "name": "paused",
+                    "type": "bool"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "cancellisting",
+            "type": "cancellisting",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "getprice",
+            "type": "getprice",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "setconfig",
+            "type": "setconfig",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "config",
+            "type": "config",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "listings",
+            "type": "listing",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "nextid",
+            "type": "nextid",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "kv_tables": {},
+    "ricardian_clauses": [],
+    "variants": [],
+    "action_results": []
+}

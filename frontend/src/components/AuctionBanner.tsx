@@ -13,6 +13,7 @@ export default function AuctionBanner() {
   const {
     auctionPrice,
     currentRound,
+    lastCompletedRound,
     timeToNextRound,
     totalContributed,
     loading,
@@ -30,13 +31,13 @@ export default function AuctionBanner() {
 
   const stats = [
     {
-      label: "Last Auction Price",
+      label: `Last Auction Price (Round ${lastCompletedRound >= 0 ? lastCompletedRound + 1 : "—"})`,
       value: `${auctionPrice.toFixed(4)} TLOS`,
       accent: true,
     },
     {
       label: "Current Round",
-      value: currentRound >= 0 ? `${currentRound} / 60` : "Not Started",
+      value: currentRound >= 0 ? `${currentRound + 1} / 60` : "Not Started",
       accent: false,
     },
     {

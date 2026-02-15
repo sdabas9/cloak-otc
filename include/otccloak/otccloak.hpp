@@ -179,9 +179,25 @@ private:
       check(pct_str.find_first_not_of("0123456789") == std::string::npos,
             "premium_pct must be a number");
 
-      asset min_price = asset::from_string(price_str + " TLOS");
+      // Parse "0.0400" format into asset with 4 decimal precision
+      check(!price_str.empty(), "min_price is empty");
+      check(price_str.find_first_not_of("0123456789.") == std::string::npos,
+            "min_price contains invalid characters");
+      auto dot_pos = price_str.find('.');
+      int64_t int_part = 0;
+      int64_t frac_part = 0;
+      if (dot_pos != std::string::npos) {
+         if (dot_pos > 0) int_part = std::stoll(price_str.substr(0, dot_pos));
+         std::string frac_str = price_str.substr(dot_pos + 1);
+         check(frac_str.size() <= 4, "min_price precision exceeds 4 decimals");
+         while (frac_str.size() < 4) frac_str += '0';
+         frac_part = std::stoll(frac_str);
+      } else {
+         int_part = std::stoll(price_str);
+      }
+      int64_t raw_amount = int_part * 10000 + frac_part;
+      asset min_price = asset(raw_amount, TLOS_SYMBOL);
       check(min_price.amount > 0, "min_price must be positive");
-      check(min_price.symbol == TLOS_SYMBOL, "min_price must be in TLOS");
 
       unsigned long raw_pct = std::stoul(pct_str);
       check(raw_pct <= 10000, "premium_pct cannot exceed 10000");

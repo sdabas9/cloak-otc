@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getListings, getConfig } from "@/lib/rpc";
 import type { Listing, ContractConfig } from "@/lib/types";
 
@@ -17,10 +17,13 @@ export function useListings(): ListingsData {
   const [config, setConfig] = useState<ContractConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasFetched = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!hasFetched.current) {
+        setLoading(true);
+      }
       const [listingsData, configData] = await Promise.all([
         getListings(),
         getConfig(),
@@ -32,6 +35,7 @@ export function useListings(): ListingsData {
       setError(err instanceof Error ? err.message : "Failed to load listings");
     } finally {
       setLoading(false);
+      hasFetched.current = true;
     }
   }, []);
 
